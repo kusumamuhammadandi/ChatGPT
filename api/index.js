@@ -5,12 +5,12 @@ import OpenAI from "openai";
 dotenv.config();
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "", // Mencegah crash jika key kosong
+  apiKey: process.env.OPENAI_API_KEY || "",
 });
 
 const app = express();
 
-// Setel Header CORS Manual
+// Setel Header CORS Manual secara eksplisit
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -40,10 +40,9 @@ app.post("/", async (req, res) => {
     const prompt = req.body.prompt;
 
     if (!prompt) {
-      return res.status(400).send({ error: "Prompt is required" });
+      return res.status(400).send({ error: "Prompt tidak boleh kosong" });
     }
 
-    // Menggunakan model gpt-3.5-turbo standar
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [{ role: "user", content: prompt }],
@@ -51,19 +50,19 @@ app.post("/", async (req, res) => {
       max_tokens: 2000,
     });
 
-    // Validasi apakah respon dari openai ada isinya sebelum dikirim ke frontend
+    // PENTING: Perbaikan pengecekan kondisi response agar tidak memicu crash
     if (response && response.choices && response.choices[0]) {
       res.status(200).send({
         bot: response.choices[0].message.content,
       });
     } else {
-      res.status(500).send({ error: "Invalid response from OpenAI" });
+      res.status(500).send({ error: "Respon dari OpenAI tidak valid" });
     }
   } catch (error) {
     console.error("OpenAI Error Details:", error);
-    // Mengembalikan pesan error asli dari OpenAI ke frontend agar kita tahu penyebabnya
     res.status(500).send({ error: error.message || "Something went wrong" });
   }
 });
 
+// WAJIB DI VERCEL SERVERLESS: Ekspor app Express Anda
 export default app;
